@@ -1,0 +1,4 @@
+# The Herdr app writes these files into every mod folder.
+mods/*/gpui-kit.d.ts
+mods/*/jsconfig.json
+.DS_Store

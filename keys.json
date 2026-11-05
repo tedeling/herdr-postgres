@@ -1,0 +1,6 @@
+{
+  "global": {
+    "ctrl-shift-y": { "command": "tab.new", "args": { "mod": "pg", "name": "Postgres" } },
+    "cmd-shift-y": { "command": "tab.new", "args": { "mod": "pg", "name": "Postgres" } }
+  }
+}
