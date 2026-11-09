@@ -4,7 +4,7 @@ A read-only browser for a Postgres server, for the [Herdr](https://herdr.dev) ap
 databases and tables, see the columns and the first rows of a table, and search all rows. A small
 list of databases for the sidebar opens the browser with one click.
 
-Current release: [v0.1.0](https://github.com/tedeling/herdr-postgres/releases/tag/v0.1.0).
+Current release: [v1.0.1](https://github.com/tedeling/herdr-postgres/releases/tag/v1.0.1).
 
 ![Postgres Browser](preview.png)
 
