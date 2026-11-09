@@ -4,6 +4,8 @@ A read-only browser for a Postgres server, for the [Herdr](https://herdr.dev) ap
 databases and tables, see the columns and the first rows of a table, and search all rows. A small
 list of databases for the sidebar opens the browser with one click.
 
+Current release: [v0.1.0](https://github.com/tedeling/herdr-postgres/releases/tag/v0.1.0).
+
 ![Postgres Browser](preview.png)
 
 ## Install
@@ -32,6 +34,14 @@ localhost:5432:*:myuser:mypassword
 ```
 
 The file must have the mode 600 (`chmod 600 ~/.pgpass`), or `psql` ignores it.
+
+## Copy a value
+
+Click a cell in the table rows to select it, then press **Ctrl+C** (or **Cmd+C** on macOS).
+The selected cell is highlighted, and a brief "Copied" notification confirms the copy.
+Copying preserves line breaks and tabs and includes text hidden by the column width, up to the
+browser's 500-character limit per value. NULL copies as
+`NULL`. Press **Esc** to clear the selection.
 
 ## The list for the sidebar
 

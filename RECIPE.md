@@ -2,8 +2,9 @@
 
 A read-only browser for a Postgres server, in a Herdr tab. On the left you see the databases of
 the server, folded into schemas and tables. Pick a table to see its columns and its first 50 rows,
-and search all rows of the table. A second view is a small list of databases for the sidebar. A
-click on a database in that list opens the browser for that database.
+and search all rows of the table. Click a row cell and press Ctrl+C or Cmd+C to copy its value,
+with a brief confirmation. A second view is a small list of databases for the sidebar. A click
+on a database in that list opens the browser for that database.
 
 ![Postgres Browser](preview.png)
 
@@ -58,7 +59,8 @@ One row on the `background` color, base type 13px.
   They scroll in both directions. The header is 26px tall on `raised`, in semibold `muted`. Each
   row is 24px tall with a 1px `border` below. Each cell has 8px side padding and truncates. NULL
   shows as the word `NULL` in `dim`. The width of a column is `longest value * 7 + 20`, from 80px
-  to 360px.
+  to 360px. Cells have the `hover` background under the pointer, and a selected cell has the
+  `selected` background.
 
 ### The list for the sidebar
 
@@ -99,8 +101,15 @@ top line.
   `column::text ilike '%term%'` on every column, with `%`, `_` and `\` escaped.
 - **The rows.** At most 50 rows, in primary key order when the table has a primary key. A cell
   holds at most 500 characters, and line breaks and tabs show as one space.
+- **Copy a value.** Clicking a row cell selects it and gives the keyboard to the view. Ctrl+C or
+  Cmd+C copies its original loaded value, including line breaks, tabs and text hidden by the
+  column width. A success notification says "Copied" for one second after the clipboard is
+  written. NULL copies as `NULL`, and an empty string copies as empty text. Inputs keep
+  their own copy behavior. Selection clears when a table or row load starts and when rows are
+  replaced. Cells cannot be selected while a load runs.
 - **Esc** empties the filter or the search box, puts the server box back, and gives the keyboard
-  back to the view. If a row search was active, the rows load again with no search.
+  back to the view. If a row search was active, the rows load again with no search. With no box
+  focused, Esc clears the selected cell.
 - **Load again** loads the databases, the tables of each open database and the selected table.
 - **The list for the sidebar.** A click looks in the shown space for a tab named
   `pg: <database>`. If that tab exists, the click selects it. If not, the click runs `tab.new` with
@@ -124,7 +133,7 @@ top line.
 - Add the list to a personal layout with this block. The `sidebar-lists` column of a clone of
   `main` is a good place:
   `{ "id": "databases", "type": "block", "content": { "mod": "pg", "props": { "view": "panel" } }, "size": { "px": 262 }, "min": 90 }`
-- From `herdr`: `exec`, `layout`, `props`, `run`, `setShared`, `settings`, `shared`, `spaces`,
+- From `herdr`: `exec`, `layout`, `notify`, `props`, `run`, `setShared`, `settings`, `shared`, `spaces`,
   `theme`. Commands: `tab.new`, `tab.select`.
 - From `gpui-base`: `v_flex`, `h_flex`, `InputState`, `Input`, `Scrollbar`, `v_virtual_list`.
 - One program: `psql`, always as
@@ -165,6 +174,8 @@ top line.
   still show after a restart of the app.
 - Without a password in `~/.pgpass`, the error names `~/.pgpass`.
 - A table shows its columns with a `PK` badge and its first 50 rows in primary key order.
+- Clicking a row cell highlights it, and Ctrl+C or Cmd+C copies its loaded value. Copying from
+  an input still copies the input's selection. Esc and reloading clear the cell selection.
 - A search finds a value in a row that was not on screen, and Esc brings all rows back.
 - A statement that takes more than 10 seconds stops with the planned message.
 - With a block in a personal layout, a click on a database in the list opens a tab named

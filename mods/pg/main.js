@@ -1,6 +1,6 @@
 import { View, div, svg } from "gpui-kit";
 import { v_flex, h_flex, InputState, Input, Scrollbar, v_virtual_list } from "gpui-base";
-import { exec, props, setShared, settings, shared, theme } from "herdr";
+import { exec, notify, props, setShared, settings, shared, theme } from "herdr";
 import { Panel } from "./panel.js";
 import {
   LIST_DATABASES_SQL,
@@ -172,6 +172,7 @@ export default class Pg extends View {
     const { database, schema, name } = this.selected;
     const load = ++this.tableLoad;
     this.rowLoad++;
+    this.selectedCell = null;
     this.loadingTable = true;
     this.loadingRows = false;
     this.rowsError = null;
@@ -194,6 +195,7 @@ export default class Pg extends View {
   }
 
   setRows({ header, rows }) {
+    this.selectedCell = null;
     this.header = header;
     this.rows = rows;
     this.widths = columnWidths(header, rows);
@@ -202,6 +204,7 @@ export default class Pg extends View {
   async loadRows(cx) {
     const { database, schema, name } = this.selected;
     const load = ++this.rowLoad;
+    this.selectedCell = null;
     this.loadingRows = true;
     cx.notify();
     try {
@@ -232,8 +235,25 @@ export default class Pg extends View {
     cx.notify();
   }
 
-  // Escape empties the box that has the keyboard and gives the keyboard back to the panel.
+  selectCell(row, column, cx) {
+    if (this.loadingTable || this.loadingRows) return;
+    this.selectedCell = { row, column };
+    this.handle.focus();
+    cx.stop_propagation();
+    cx.notify();
+  }
+
+  // Only copy a cell when the view itself has focus; inputs handle their own copy shortcut.
   onKey(e, cx) {
+    if ((e.keystroke === "ctrl-c" || e.keystroke === "cmd-c") && this.handle.is_focused() && this.selectedCell) {
+      const { row, column } = this.selectedCell;
+      const value = this.rows[row]?.[column];
+      if (value === undefined) return;
+      cx.write_to_clipboard(value ?? "NULL");
+      cx.stop_propagation();
+      notify({ title: "Copied", level: "success", timeout: 1000 });
+      return;
+    }
     if (e.key !== "escape") return;
     if (this.typingServer) {
       this.serverInput.set_value(this.server);
@@ -247,6 +267,8 @@ export default class Pg extends View {
       this.searchInput.set_value("");
       this.typingSearch = false;
       if (this.rowSearch) this.search("", cx);
+    } else if (this.selectedCell) {
+      this.selectedCell = null;
     } else {
       return;
     }
@@ -353,10 +375,14 @@ export default class Pg extends View {
       .child(v_flex().min_w(total).h_full().min_h(0)
         .when(this.header.length > 0, (e) => e.child(h_flex().h(26).flex_none().bg(t.raised).border_b(1).border_color(t.border).children(this.header.map((name, i) =>
           div().w(this.widths[i]).flex_none().h_full().flex().items_center().px(8).font_semibold().text_color(t.muted).child(div().truncate().child(name))))))
-        .child(v_flex().id("pg-rows-y").flex_1().min_h(0).overflow_y_scrollbar().children(this.rows.map((row) =>
+        .child(v_flex().id("pg-rows-y").flex_1().min_h(0).overflow_y_scrollbar().children(this.rows.map((row, rowIndex) =>
           h_flex().h(24).flex_none().border_b(1).border_color(t.border).children(row.map((value, i) => {
             const text = cellText(value);
-            return div().w(this.widths[i]).flex_none().h_full().flex().items_center().px(8)
+            const selected = this.selectedCell?.row === rowIndex && this.selectedCell?.column === i;
+            return div().id(`pg-cell-${rowIndex}-${i}`).w(this.widths[i]).flex_none().h_full().flex().items_center().px(8).cursor_pointer()
+              .when(selected, (e) => e.bg(t.selected))
+              .hover((s) => s.bg(selected ? t.selected : t.hover))
+              .on_click((_e, cx) => this.selectCell(rowIndex, i, cx))
               .child(div().truncate().text_color(text === null ? t.dim : t.foreground).child(text ?? "NULL"));
           }))))));
   }
