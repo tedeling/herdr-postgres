@@ -52,6 +52,22 @@ and add this block to its `sidebar-lists` column:
 { "id": "databases", "type": "block", "content": { "mod": "pg", "props": { "view": "panel" } }, "size": { "px": 262 }, "min": 90 }
 ```
 
+## On another computer
+
+You can keep your databases and `~/.pgpass` on one computer, the hub, and use Herdr on other
+computers too. The mod then follows `hub.json` of a hub registry: a sync mod writes this file into
+the app folder (`~/.config/herdr-app`). The mod reads it again before each `psql` call.
+
+| App folder | The mod |
+|---|---|
+| No `registry/registry.json` | Runs `psql` on this computer, as above. |
+| `hub.json` with `"state": "local"` | Runs `psql` on this computer. |
+| `hub.json` with `"state": "remote"` and `"machine": "hub-box"` | Runs `psql` on `hub-box` through herdr-core (`hc`). |
+| `hub.json` with `"state": "missing"`, or no `hub.json` | Runs nothing, and tells you what to do. |
+
+On the hub, `psql` reads the password from `~/.pgpass` of the hub. The password is never in an
+argument. If the hub does not answer, the mod shows `<hub> does not answer (<reason>)`.
+
 ## What it can do on your server
 
 Each session is read-only (`default_transaction_read_only=on`), and each statement stops after 10

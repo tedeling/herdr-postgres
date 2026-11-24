@@ -1,6 +1,7 @@
 import { View, div, svg } from "gpui-kit";
 import { v_flex, h_flex, InputState, Input, Scrollbar, v_virtual_list } from "gpui-base";
-import { exec, notify, props, setShared, settings, shared, theme } from "herdr";
+import { appHome, checking, exec, notify, props, readTextFile, setShared, settings, shared, theme } from "herdr";
+import { execOptions, hubError, loadTarget } from "./hub.js";
 import { Panel } from "./panel.js";
 import {
   LIST_DATABASES_SQL,
@@ -30,8 +31,14 @@ const LIST_ROW_HEIGHT = 24;
 const currentServer = () => serverText(shared(SERVER_KEY));
 
 async function runPsql(database, sql) {
-  const result = await exec("psql", psqlArgs(parseServer(currentServer()), database, sql)).catch(() => {
-    throw new Error("Could not start psql. Install the PostgreSQL client.");
+  // The check of the app runs init() for real. It must start no process.
+  if (checking()) throw new Error("The app checks this mod. It runs no query.");
+  // The target can change at any time, so each call reads hub.json again.
+  const target = await loadTarget(readTextFile, appHome());
+  const options = execOptions(target);
+  // The password comes from ~/.pgpass of the computer where psql runs. It is never an argument.
+  const result = await exec("psql", psqlArgs(parseServer(currentServer()), database, sql), options).catch((e) => {
+    throw new Error(target.mode === "remote" ? hubError(target, e) : "Could not start psql. Install the PostgreSQL client.");
   });
   if (result.code !== 0) throw new Error(errorMessage(result.stderr));
   return result.stdout;
