@@ -25,6 +25,8 @@ To open it with a key, merge `keys.json` into your `~/.config/herdr-app/keys.jso
 
 Type the server in the **Server** box as `user@host:port` and press Enter. The default is
 `localhost:5432`. The value stays on your computer, in the Herdr state and not in the mod files.
+The Server box is in the Postgres tab. If the sidebar panel shows an error from the server, click
+the error to open that tab.
 
 Do not type a password in the box. The mod never asks for a password, and `psql` reads it from
 `~/.pgpass`:
@@ -67,6 +69,10 @@ the app folder (`~/.config/herdr-app`). The mod reads it again before each `psql
 
 On the hub, `psql` reads the password from `~/.pgpass` of the hub. The password is never in an
 argument. If the hub does not answer, the mod shows `<hub> does not answer (<reason>)`.
+
+If this computer has no server of its own, the mod uses the server of the hub: the value of
+`pg.server` in `~/.config/herdr-app/shared.json` on the hub. The mod keeps that value as the server of
+this computer, so the Server box shows it, and you can change it there.
 
 ## What it can do on your server
 

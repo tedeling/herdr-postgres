@@ -32,6 +32,32 @@ export function openCommand(spaces, database) {
   return tab ? ["tab.select", { id: tab.id }] : ["tab.new", { mod: "pg", name, props: { database } }];
 }
 
+// The command for a click on an error in the panel: go to the Postgres tab, where the Server box is.
+export function serverTabCommand(spaces) {
+  const tab = spaces.find((space) => space.active)?.tabs.find((t) => t.name === "Postgres");
+  return tab ? ["tab.select", { id: tab.id }] : ["tab.new", { mod: "pg", name: "Postgres" }];
+}
+
+export const CHANGE_SERVER = "Click here to change the server.";
+
+// The shared state of Herdr on the hub, relative to the home folder of the hub.
+export const HUB_SHARED = ".config/herdr-app/shared.json";
+
+// psql runs on the hub in remote mode, so a computer with no server of its own uses the server of the hub.
+export const needsHubServer = (target, stored) => target.mode === "remote" && !parseServer(stored);
+
+// The server in the shared state of the hub, or null.
+export function hubServer(text) {
+  let state;
+  try {
+    state = JSON.parse(String(text ?? ""));
+  } catch {
+    return null;
+  }
+  const value = state && !Array.isArray(state) ? state[SERVER_KEY] : null;
+  return typeof value === "string" && parseServer(value) ? value.trim() : null;
+}
+
 export const quoteLiteral = (text) => `'${text.replace(/'/g, "''")}'`;
 export const quoteIdent = (name) => `"${name.replace(/"/g, '""')}"`;
 

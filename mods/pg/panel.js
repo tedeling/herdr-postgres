@@ -2,7 +2,7 @@
 import { div, svg } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
 import { layout, run, spaces, theme } from "herdr";
-import { openCommand } from "./logic.js";
+import { CHANGE_SERVER, openCommand, serverTabCommand } from "./logic.js";
 
 function find(node, id) {
   if (node?.id === id) return node;
@@ -21,6 +21,7 @@ export class Panel {
     this.listDatabases = listDatabases;
     this.databases = [];
     this.error = null;
+    this.fromServer = false;
     this.loading = false;
     // A newer load makes the answer of an older load worthless.
     this.loadNumber = 0;
@@ -30,6 +31,7 @@ export class Panel {
   reconnect(cx) {
     this.databases = [];
     this.error = null;
+    this.fromServer = false;
     this.load(cx);
   }
 
@@ -40,14 +42,17 @@ export class Panel {
     cx.spawn(async (cx) => {
       let databases = null;
       let error = null;
+      let fromServer = false;
       try {
         databases = await this.listDatabases();
       } catch (e) {
         error = String(e?.message ?? e);
+        fromServer = Boolean(e?.fromServer);
       }
       if (load !== this.loadNumber) return;
       if (databases) this.databases = databases;
       this.error = error;
+      this.fromServer = fromServer;
       this.loading = false;
       cx.notify();
     });
@@ -56,6 +61,21 @@ export class Panel {
   open(database) {
     const [command, args] = openCommand(spaces(), database);
     run(command, args);
+  }
+
+  // The Server box is in the Postgres tab, not in this panel.
+  openServerTab() {
+    const [command, args] = serverTabCommand(spaces());
+    run(command, args);
+  }
+
+  errorBlock(t) {
+    const text = div().text_size(11).text_color(t.ansi1).child(this.error);
+    if (!this.fromServer) return div().flex_none().px(16).py(4).child(text);
+    return v_flex().id("db-error").flex_none().px(16).py(4).cursor_pointer()
+      .on_click(() => this.openServerTab())
+      .child(text)
+      .child(div().text_size(11).text_color(t.dim).child(CHANGE_SERVER));
   }
 
   row(name, t) {
@@ -77,7 +97,7 @@ export class Panel {
           .tooltip("Load again")
           .on_click((_e, cx) => this.load(cx))
           .child(this.loading ? icon.spin(900) : icon)))
-      .when(Boolean(this.error), (e) => e.child(div().flex_none().px(16).py(4).text_size(11).text_color(t.ansi1).child(this.error)))
+      .when(Boolean(this.error), (e) => e.child(this.errorBlock(t)))
       .child(v_flex().id("db-list").flex_1().min_h(0).px(8).overflow_y_scrollbar().children(this.databases.map((name) => this.row(name, t))));
   }
 }

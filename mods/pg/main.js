@@ -6,14 +6,17 @@ import { Panel } from "./panel.js";
 import {
   LIST_DATABASES_SQL,
   LIST_TABLES_SQL,
+  HUB_SHARED,
   SERVER_HELP,
   SERVER_KEY,
   cellText,
   columnWidths,
   columnsSql,
   errorMessage,
+  hubServer,
   kindLabel,
   listRows,
+  needsHubServer,
   parseColumns,
   parseDatabases,
   parseRows,
@@ -30,17 +33,30 @@ const LIST_ROW_HEIGHT = 24;
 
 const currentServer = () => serverText(shared(SERVER_KEY));
 
+// In remote mode, a computer with no server of its own takes the server of the hub one time. It keeps
+// the value in its own state, so the Server box shows the value, and a person can change it there.
+async function serverFor(target, options) {
+  if (!needsHubServer(target, shared(SERVER_KEY))) return currentServer();
+  const result = await exec("cat", [HUB_SHARED], { timeout: 10000, ...options }).catch(() => null);
+  const server = result?.code === 0 ? hubServer(result.stdout) : null;
+  if (!server) return currentServer();
+  setShared(SERVER_KEY, server);
+  return server;
+}
+
 async function runPsql(database, sql) {
   // The check of the app runs init() for real. It must start no process.
   if (checking()) throw new Error("The app checks this mod. It runs no query.");
   // The target can change at any time, so each call reads hub.json again.
   const target = await loadTarget(readTextFile, appHome());
   const options = execOptions(target);
+  const server = await serverFor(target, options);
   // The password comes from ~/.pgpass of the computer where psql runs. It is never an argument.
-  const result = await exec("psql", psqlArgs(parseServer(currentServer()), database, sql), options).catch((e) => {
+  const result = await exec("psql", psqlArgs(parseServer(server), database, sql), options).catch((e) => {
     throw new Error(target.mode === "remote" ? hubError(target, e) : "Could not start psql. Install the PostgreSQL client.");
   });
-  if (result.code !== 0) throw new Error(errorMessage(result.stderr));
+  // A psql error can come from a wrong server. The panel then offers the Server box.
+  if (result.code !== 0) throw Object.assign(new Error(errorMessage(result.stderr)), { fromServer: true });
   return result.stdout;
 }
 

@@ -12,8 +12,11 @@ import {
   errorMessage,
   filterTables,
   groupBySchema,
+  HUB_SHARED,
+  hubServer,
   kindLabel,
   listRows,
+  needsHubServer,
   openCommand,
   parseColumns,
   parseCsv,
@@ -25,6 +28,7 @@ import {
   quoteLiteral,
   rowsLabel,
   rowsSql,
+  serverTabCommand,
   serverText,
 } from "./logic.js";
 
@@ -409,4 +413,38 @@ test("widths: fit the longest value inside the limits", () => {
 
 test("widths: use the header when it is longer than the values", () => {
   assert.equal(columnWidths(["a_long_column_name"], [["1"]])[0], 18 * 7 + 20);
+});
+
+test("server tab: with no Postgres tab, a new tab opens", () => {
+  assert.deepEqual(serverTabCommand([shownSpace(tab("t1", "1"))]), ["tab.new", { mod: "pg", name: "Postgres" }]);
+});
+
+test("server tab: a Postgres tab in the shown space gets selected", () => {
+  const spaces = [otherSpace(tab("t9", "Postgres")), shownSpace(tab("t1", "1"), tab("t2", "Postgres"))];
+  assert.deepEqual(serverTabCommand(spaces), ["tab.select", { id: "t2" }]);
+});
+
+test("hub server: the path is relative to the home folder of the hub", () => {
+  assert.equal(HUB_SHARED, ".config/herdr-app/shared.json");
+});
+
+test("hub server: takes pg.server from the shared state of the hub", () => {
+  assert.equal(hubServer('{"layout":"main","pg.server":" app@localhost:5433 "}'), "app@localhost:5433");
+});
+
+test("hub server: no value, a bad value, or bad JSON gives null", () => {
+  assert.equal(hubServer('{"layout":"main"}'), null);
+  assert.equal(hubServer('{"pg.server":"not a server"}'), null);
+  assert.equal(hubServer('{"pg.server":5433}'), null);
+  assert.equal(hubServer("{"), null);
+  assert.equal(hubServer("[]"), null);
+  assert.equal(hubServer(""), null);
+  assert.equal(hubServer(null), null);
+});
+
+test("hub server: needed only in remote mode with no valid server of its own", () => {
+  assert.equal(needsHubServer({ mode: "remote", machine: "hub-box", hub: "hub-box" }, undefined), true);
+  assert.equal(needsHubServer({ mode: "remote", machine: "hub-box", hub: "hub-box" }, "not a server"), true);
+  assert.equal(needsHubServer({ mode: "remote", machine: "hub-box", hub: "hub-box" }, "app@db:5433"), false);
+  assert.equal(needsHubServer({ mode: "local" }, undefined), false);
 });
